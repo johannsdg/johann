@@ -1,0 +1,39 @@
+# Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
+# Use of this source code is governed by a BSD-3-clause license that can
+# be found in the LICENSE file. See the AUTHORS file for names of contributors.
+
+version: "2.4"
+
+# Note: do not alter the build process of any services in docker-compose.dev.yml
+services:
+  johann_conductor:
+    environment:
+      - LOG_LEVEL=10
+      - TESTING=1
+
+  tester:
+    build:
+      context: ${JOHANN_CORE_ROOT}/
+      dockerfile: build/Dockerfile.tester
+    volumes:
+      - ${JOHANN_CORE_ROOT}/plugins:/opt/johann/johann/plugins
+      - ${JOHANN_CORE_ROOT}/tests:/opt/johann/tests
+    networks:
+      - servicenet
+    command: /bin/true
+
+  blank_3.6_buster:
+    container_name: blank_3.6_buster
+    image: python:3.6-buster
+    networks:
+      - public # for online pip package install
+      - servicenet
+    command: tail -f /dev/null
+
+  blank_3.7_buster:
+    container_name: blank_3.7_buster
+    image: python:3.7-buster
+    networks:
+      - public # for online pip package install
+      - servicenet
+    command: tail -f /dev/null

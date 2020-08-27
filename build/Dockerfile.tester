@@ -1,0 +1,19 @@
+# Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
+# Use of this source code is governed by a BSD-3-clause license that can
+# be found in the LICENSE file. See the AUTHORS file for names of contributors.
+
+FROM python:3.6-buster
+
+WORKDIR /tmp/johann
+
+# Install requirements
+COPY requirements*.txt ./
+RUN pip install -r requirements.txt -r requirements-dev.txt
+
+WORKDIR /opt/johann
+
+COPY johann ./johann/
+COPY tests ./tests/
+
+ENV PYTHONPATH=/opt/johann
+CMD pytest

@@ -1,0 +1,72 @@
+# Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
+# Use of this source code is governed by a BSD-3-clause license that can
+# be found in the LICENSE file. See the AUTHORS file for names of contributors.
+exclude: "docs|.git|.tox"
+default_stages: [commit]
+default_language_version:
+  python: python3.6
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: master
+    hooks:
+      - id: check-byte-order-marker
+      - id: check-executables-have-shebangs
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: check-docstring-first
+      - id: check-added-large-files
+      - id: name-tests-test
+      - id: check-json
+      - id: check-yaml
+        exclude: tests/scores/malformed
+
+  - repo: https://github.com/timothycrosley/isort
+    rev: 5.0.2
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/psf/black
+    #rev: stable
+    rev: cc2facaac69a8ffa4486e6fe498842debb17ce12
+    hooks:
+      - id: black
+
+  - repo: https://github.com/prettier/prettier
+    rev: 2.0.5
+    hooks:
+      - id: prettier
+        args: [--prose-wrap=always, --print-width=88]
+        exclude: tests/scores/malformed
+
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.8.3
+    hooks:
+      - id: flake8
+        args: [--config=setup.cfg]
+        additional_dependencies: [flake8-bugbear]
+
+  - repo: https://github.com/jazzband/pip-tools
+    rev: 5.2.1
+    hooks:
+      - id: pip-compile
+        args: [--quiet, --generate-hashes, --no-emit-index-url]
+      - id: pip-compile
+        name: pip-compile-dev
+        args:
+          [
+            --quiet,
+            --allow-unsafe,
+            --generate-hashes,
+            --no-emit-index-url,
+            --output-file=requirements-dev.txt,
+            requirements-dev.in,
+          ]
+        files: ^requirements(-dev)?\.(in|txt)$
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.6.2
+    hooks:
+      - id: bandit
+        entry: bandit -lll
+        exclude: tests

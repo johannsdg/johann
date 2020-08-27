@@ -1,0 +1,58 @@
+# Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
+# Use of this source code is governed by a BSD-3-clause license that can
+# be found in the LICENSE file. See the AUTHORS file for names of contributors.
+
+version: "2.4"
+
+networks:
+  public:
+  servicenet:
+    internal: true
+
+services:
+  redis:
+    image: redis:4-alpine
+    command: redis-server --save "" --appendonly no
+    expose:
+      - "6379"
+    networks:
+      - servicenet
+
+  johann_conductor:
+    container_name: johann_conductor
+    build:
+      context: ${JOHANN_CORE_ROOT}/
+      dockerfile: build/Dockerfile.conductor
+    image: johann_conductor
+    environment:
+      - ENV_FILE=.env_conductor
+      - CELERY_QUEUE_ID=johann_conductor
+      - CELERY_WORKERS_MIN=10
+      - CELERY_WORKERS_MAX=20
+    expose:
+      - "5000"
+    ports:
+      - "127.0.0.1:5000:5000"
+    depends_on:
+      - redis
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${JOHANN_CORE_ROOT}/plugins:/opt/johann/johann/plugins
+    networks:
+      - public
+      - servicenet
+
+  johann_player:
+    container_name: johann_player_1
+    build:
+      context: ${JOHANN_CORE_ROOT}/
+      dockerfile: build/Dockerfile.player
+    image: johann_player_base
+    environment:
+      - CELERY_QUEUE_ID=johann_player_1
+    volumes:
+      - ${JOHANN_CORE_ROOT}/plugins:/opt/johann/johann/plugins
+    networks:
+      - servicenet
+    depends_on:
+      - johann_conductor

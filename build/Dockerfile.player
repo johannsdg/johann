@@ -1,0 +1,52 @@
+# Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
+# Use of this source code is governed by a BSD-3-clause license that can
+# be found in the LICENSE file. See the AUTHORS file for names of contributors.
+
+ARG BASE_IMAGE=python:3.7-buster
+FROM $BASE_IMAGE
+
+WORKDIR /opt
+USER 0
+
+# Ensure latest packages
+RUN apt-get update && apt-get upgrade -y
+
+# get pmtr
+RUN git clone https://github.com/troydhanson/pmtr.git
+
+WORKDIR /opt/pmtr
+
+# Install pmtr
+RUN ./autogen.sh
+RUN ./configure --bindir=/usr/bin --sysconfdir=/etc
+RUN make -j ${nproc} && make install
+
+WORKDIR /opt
+
+RUN rm -r pmtr
+
+WORKDIR /tmp/johann
+
+ARG JOHANN_PYTHON=/usr/local/bin/python3
+ENV JOHANN_PYTHON=$JOHANN_PYTHON
+
+# Install Johann and plugin requirements
+COPY johann/requirements_base.txt ./requirements_base.txt
+COPY johann/requirements_plugins.txt ./
+RUN $JOHANN_PYTHON -m pip install -r requirements_base.txt -r requirements_plugins.txt
+
+WORKDIR /opt/johann/johann
+
+RUN rm -rf /tmp/johann
+
+# do not specify a cmd since this file is sometimes used on top of an image with a CMD
+# specify CMD via docker-compose if needed
+
+# Install Johann (plugins mounted as docker volume)
+COPY johann/ ./
+ENV PYTHONPATH=/opt/johann
+
+# Run Johann and any other programs via pmtr
+ARG RUN_PMTR_SUFFIX=default
+ENV RUN_PMTR_SUFFIX=$RUN_PMTR_SUFFIX
+CMD /bin/bash /opt/johann/johann/run_player_pmtr.$RUN_PMTR_SUFFIX.sh

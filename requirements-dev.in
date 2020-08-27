@@ -1,0 +1,6 @@
+-c requirements.txt
+
+pre-commit>=1.21.0
+pip-tools>=5.2.1
+pytest
+safety

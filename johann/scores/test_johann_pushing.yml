@@ -1,0 +1,25 @@
+# Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
+# Use of this source code is governed by a BSD-3-clause license that can
+# be found in the LICENSE file. See the AUTHORS file for names of contributors.
+
+---
+name: test_johann_pushing
+category: testing
+description:
+  test Johann's push functionality to install the player software on a host that doesn't
+  have it already
+players:
+  docker_targets:
+    name: docker_targets
+    hosts:
+      - blank_3.6_buster
+      - blank_3.7_buster
+    image: None
+    scale: 2
+measures:
+  - name: ls_root
+    players: [docker_targets]
+    start_delay: 0
+    task: johann.tasks_main.run_shell_command
+    args:
+      - "ls -la /"
