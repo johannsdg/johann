@@ -125,10 +125,6 @@ Start Johann in development mode (this will also build it).
 make dev
 ```
 
-```bash
-make requirements
-```
-
 ### Testing
 
 ```bash
@@ -173,7 +169,7 @@ In addition to the dependencies listed in [Requirements](#requirements) and
 ## License
 
 Use of this source code is governed by a BSD-3-clause license that can be found in the
-LICENSE file. See the AUTHORS file for names of contributors.
+[LICENSE](LICENSE) file. See the [AUTHORS](AUTHORS) file for names of contributors.
 
 ## Acknowledgments
 
