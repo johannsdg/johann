@@ -1,8 +1,8 @@
 ![Latest release](https://img.shields.io/github/v/release/johannsdg/johann?include_prereleases&sort=semver)
 ![Platform support](https://img.shields.io/badge/platform-linux-blue)
 ![Python version support](https://img.shields.io/badge/python-3.6%20%7C%203.7-blue)
-![License](https://img.shields.io/github/license/johannsdg/johann)
-![Gitlab pipeline status](https://img.shields.io/gitlab/pipeline/johannsdg/johann/master)
+[![License](https://img.shields.io/github/license/johannsdg/johann)](LICENSE)
+[![pipeline status](https://gitlab.com/johannsdg/johann/badges/master/pipeline.svg)](https://gitlab.com/johannsdg/johann/-/commits/master)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
