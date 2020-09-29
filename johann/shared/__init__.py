@@ -1,12 +1,3 @@
 # Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
 # Use of this source code is governed by a BSD-3-clause license that can
 # be found in the LICENSE file. See the AUTHORS file for names of contributors.
-
--c requirements.txt
-
-mypy>=0.782
-pre-commit>=1.21.0
-pip-tools>=5.2.1
-pytest
-safety
-twine

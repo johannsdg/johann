@@ -9,8 +9,8 @@ import pytest
 import requests
 
 from johann.shared.config import JohannConfig
+from johann.shared.enums import TaskState
 from johann.shared.logger import JohannLogger
-from johann.util import TaskState
 
 CONDUCTOR_URL = os.getenv("CONDUCTOR_URL", "http://johann_conductor:5000")
 

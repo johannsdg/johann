@@ -1,12 +1,15 @@
 # Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
 # Use of this source code is governed by a BSD-3-clause license that can
 # be found in the LICENSE file. See the AUTHORS file for names of contributors.
+
+import pprint
 import subprocess
 import time
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from celery.signals import celeryd_init, task_failure, task_retry
 
+import johann.util
 from johann.shared.config import JohannConfig, celery_app
 from johann.shared.logger import JohannLogger
 from johann.tasks_util import RetryableException
@@ -37,7 +40,13 @@ def configure_workers(sender=None, conf=None, **kwar):
     config = JohannConfig.get_config()
     logger = JohannLogger(__name__).logger
 
-    logger.info(config.json(indent=2, sort_keys=True))
+    johann.util.load_plugins()
+    logger.debug(
+        "Celery registered"
+        f" tasks:\n{pprint.pformat(johann.util.celery_registered_tasks())}"
+    )
+
+    logger.debug(config.json(indent=2, sort_keys=True))
 
 
 @task_failure.connect

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional
 from uuid import uuid4
 
+import dotenv
 from celery import Celery
 from pydantic import (
     UUID4,
@@ -18,6 +19,7 @@ from pydantic import (
     DirectoryPath,
     Field,
     PositiveInt,
+    ValidationError,
     conint,
     constr,
     validator,
@@ -49,7 +51,6 @@ class JohannConfig(BaseSettings):
     ENV_FILE: Path = _ENV_FILE
     SRC_ROOT: DirectoryPath = Path(__file__).parent.parent.absolute()
     PROJECT_ROOT: DirectoryPath = SRC_ROOT.parent
-    SCORE_PATH: Path = SRC_ROOT.joinpath("scores")
     TARBALL_PATH: Path = "/srv/johann"
 
     DEPLOY_PATH_POSIX: Path = "/opt/johann/johann"
@@ -73,8 +74,23 @@ class JohannConfig(BaseSettings):
     REDIS_URL: AnyUrl = (  # RedisDSN needs user
         f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
     )
+    SKIP_REDIS: bool = False
+
+    PYPI_INDEX_PROTO: str = "http"
+    PYPI_INDEX_HOST: str = "pypiserver"
+    PYPI_INDEX_PORT: PositiveInt = 8080
+    PYPI_INDEX_URL: str = f"{PYPI_INDEX_PROTO}://{PYPI_INDEX_HOST}:{PYPI_INDEX_PORT}"
 
     CREDS_FILE: Path = ".creds"
+
+    @validator("CREDS_FILE")
+    def load_creds_file(cls, v, values):
+        try:
+            if v.is_file():
+                dotenv.load_dotenv(v)
+        except Exception:
+            raise ValidationError(f"Failed to load CREDS_FILE '{v}'")
+        return v
 
     HOSTS_FILE: Optional[Path] = None
     HOST_CONFIRMED_ON_VALID_SECS: PositiveInt = 30
@@ -167,7 +183,7 @@ class JohannConfig(BaseSettings):
 
     HOST_AUTO_INSTALL: bool = True
     PLAYER_HOSTS_DUMP_KEY: str = "hosts"
-    PLUGINS_EXCLUDE: List[str] = []  # TODO this is WIP
+    PLUGINS_EXCLUDE: List[str] = []  # PLANNED: this implenentation is still WIP
 
     # keys should be all upper-case
     HOST_CONTROL_CLASS_NAMES: Dict[str, Optional[str]] = {
@@ -182,10 +198,9 @@ class JohannConfig(BaseSettings):
         "host_control.py",  # run_cmd, etc
         "johann_main.py",
         "tasks*.py",
-        "plugins/*/*tasks*.py",
         "run_player_pmtr*.sh",
         "util.py",
-        "requirements*.txt",
+        "requirements.txt",
     ]
 
     class Config(BaseSettings.Config):
@@ -205,4 +220,4 @@ celery_app.config_from_object("johann.celeryconfig")
 scores: Dict[str, "Score"] = {}
 workers = []
 hosts: Dict[str, "Host"] = {}
-discovered_plugins = []
+active_plugins: List[str] = []

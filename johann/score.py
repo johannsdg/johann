@@ -18,11 +18,10 @@ from johann.host_control_util import get_host_control_class, get_host_names
 from johann.measure import MeasureSchema
 from johann.player import PlayerSchema
 from johann.shared.config import JohannConfig, hosts, scores
+from johann.shared.enums import TaskState
+from johann.shared.fields import NameField, StateField
 from johann.shared.logger import JohannLogger
 from johann.util import (
-    NameField,
-    StateField,
-    TaskState,
     create_johann_tarball,
     gudexc,
     gudlog,
@@ -71,7 +70,6 @@ class ScoreSchema(Schema):
         keys=fields.Str(), values=fields.Nested(PlayerSchema), required=True
     )
     measures = fields.List(fields.Nested(MeasureSchema), required=True)
-    file_name = fields.Str(required=True)
     create_hosts = fields.Boolean(missing=False)
     discard_hosts = fields.Boolean(missing=False)
 
@@ -89,6 +87,7 @@ class ScoreSchema(Schema):
     )
     finished = fields.Boolean(dump_only=True)
 
+    package = fields.Str(dump_only=True)
     started_at = fields.DateTime(dump_only=True)
     finished_at = fields.DateTime(dump_only=True)
     stored_data = fields.Dict(keys=fields.Str(), values=fields.Raw(), dump_only=True)
@@ -155,7 +154,6 @@ class Score(object):
         description,
         players,
         measures,
-        file_name,
         create_hosts,
         discard_hosts,
         original_data,
@@ -166,13 +164,13 @@ class Score(object):
         self.description: str = description
         self.players: Dict[str, "Player"] = players
         self.measures: List["Measure"] = measures
-        self.file_name: str = file_name
         self.create_hosts: bool = create_hosts
         self.discard_hosts: bool = discard_hosts
         self.original_data: Dict[str, Any] = original_data
 
         self.state: TaskState = TaskState.PENDING
         self.status: Dict[str, Dict[str, Dict[str, str]]] = {}
+        self.package: Optional[str] = None
         self.finished: bool = False
         self.started_at: Optional[datetime] = None
         self.finished_at: Optional[datetime] = None
@@ -226,8 +224,6 @@ class Score(object):
                     dump_only_fields.append(k)
             for f in dump_only_fields:
                 del data[f]
-            # remove file_name since this is added by Johann and not normally in the yaml
-            del data["file_name"]
 
             # remove measure-level fields
             dump_only_fields = []

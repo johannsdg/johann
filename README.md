@@ -72,24 +72,27 @@ happen at any time. This is represented by its
 
 For now, Johann should be considered to be in perpetual
 [alpha](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha). This is made
-explicit by the "-alpha" in the version identifier. Please expect it to be rough around
-the edges (and maybe everywhere else).
+explicit by the "a" in the version identifier. Please expect it to be rough around the
+edges (and maybe everywhere else).
 
 Johann should only be used in isolated or protected networks of known and trusted
-hosts/users. It should only be used for research and development, and never in
+hosts/users. It should only be used for research and development, and **not** in
 production.
 
 ## Roadmap
 
 Here are some planned improvements to Johann, in no particular order:
 
+- add a simple GUI
 - switch to [pydantic](https://github.com/samuelcolvin/pydantic)
 - switch to [fastapi](https://github.com/tiangolo/fastapi)
-- use [mypy](https://github.com/python/mypy)
 - add more documentation
+- use [mypy](https://github.com/python/mypy) and
+  [pylint](https://github.com/pycqa/pylint)
 - add more tests
 - add user authentication
-- add a simple GUI
+- support kwargs in Measures
+- Score-level variables; configurable at runtime
 
 ## Contributing
 
@@ -111,7 +114,7 @@ apk add --no-cache python3-dev bash make git gcc linux-headers musl-dev
 ```
 
 Setup the virtual environment used for Johann development. This also installs
-[pre-commit](https://pre-commit.com/).
+[pre-commit](https://pre-commit.com/) hooks.
 
 ```bash
 make dev-setup
@@ -142,6 +145,12 @@ Lint the files staged for commit.
 make lint
 ```
 
+Lint all files in the repo.
+
+```bash
+make lint-all
+```
+
 Use [safety](https://github.com/pyupio/safety) to check for known dependency
 vulnerabilities.
 
@@ -151,20 +160,16 @@ make safety
 
 ## Built With
 
-In addition to the dependencies listed in [Requirements](#requirements) and
-[requirements.in](requirements.in), Johann is made possible with the help of:
+In addition to the dependencies listed in [Requirements](#requirements), please see:
 
-- [bandit](https://github.com/PyCQA/bandit)
-- [black](https://github.com/psf/black)
-- [flake8](https://gitlab.com/pycqa/flake8)
+- [setup.py](setup.py)
+- [requirements-dev.in](requirements-dev.in)
+- [.pre-commit-config.yaml](.pre-commit-config.yaml)
+
+In addition to these, Johann is also made possible with the help of (alphabetically):
+
 - [gitlab-ci](https://about.gitlab.com/topics/ci-cd/)
-- [isort](https://github.com/timothycrosley/isort)
-- [pip-tools](https://github.com/jazzband/pip-tools)
 - [pmtr](https://github.com/troydhanson/pmtr)
-- [pre-commit](https://github.com/pre-commit/pre-commit)
-- [prettier](https://github.com/prettier/prettier)
-- [pytest](https://github.com/pytest-dev/pytest)
-- [safety](https://github.com/pyupio/safety)
 
 ## License
 

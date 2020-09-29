@@ -26,7 +26,7 @@ stages:
 
 lint:
   extends: .lint
-  script: make lint
+  script: make lint-all
   cache:
     key: "${CI_JOB_NAME}"
     paths:
@@ -64,4 +64,4 @@ clean:
   stage: .post
   when: always
   extends: .docker
-  script: make clean
+  script: make clean-all

@@ -8,16 +8,15 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="johann",
-    version="0.1.0-alpha",
-    description="Lightweight and flexible scenario orchestration",
+    description="Johann, lightweight and flexible scenario orchestration",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Jeffrey James",
     author_email="lobotmcj@gmail.com",
-    license="BSD",
+    license="BSD-3-Clause",
     url="https://github.com/johannsdg/johann",
-    packages=["johann"],
     include_package_data=True,
+    packages=setuptools.find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: BSD License",

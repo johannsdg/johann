@@ -3,28 +3,21 @@
 # be found in the LICENSE file. See the AUTHORS file for names of contributors.
 import asyncio
 import json
-import os
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
+import marshmallow
 import ruamel.yaml
-from marshmallow import ValidationError as MarshmallowValidationError
 from ruamel.yaml.error import YAMLError, YAMLFutureWarning, YAMLWarning
 
+from johann import util
 from johann.host import HostSchema
 from johann.player import PlayerSchema
 from johann.score import ScoreSchema
 from johann.shared.config import JohannConfig, hosts, scores
 from johann.shared.logger import JohannLogger
-from johann.util import (
-    get_codehash,
-    get_score_paths,
-    johann_response,
-    safe_name,
-    wrap_future,
-)
 
 if TYPE_CHECKING:
     from aiohttp.web import Request, Response
@@ -54,44 +47,42 @@ async def affrettando(request: "Request") -> "Response":
     return r
 
 
-# read all scores in the SCORE_PATH
 def read_scores() -> None:
-    for p in get_score_paths():
-        _read_score_by_path(p)
-
-
-# do not pass user input to this function
-def _read_score_by_path(
-    filepath: str, score_name: Optional[str] = None
-) -> Tuple[Optional[Dict[str, Any]], Optional[str], int]:
-    try:
-        if not score_name:
-            score_name = os.path.basename(filepath)
-
-        # some test scripts won't pass Marshmallow validation; so check both here and below
-        if (
-            not config.TESTING and os.path.basename(filepath)[:5] == "test_"
-        ):  # this should probably be based on category not filename?
-            msg = f"Skipping '{os.path.basename(filepath)}'"
-            logger.info(msg)
-            return None, msg, 400
-
-        with open(filepath, "r") as file:
-            score_dict = yaml.load(file)
-            score_dict["file_name"] = os.path.basename(filepath)
-            if (
-                "category" in score_dict
-                and score_dict["category"] in config.PLUGINS_EXCLUDE
-            ):
-                msg = f"Skipping '{os.path.basename(filepath)}'"
+    for package_name, score_names in util.get_score_resources("scores").items():
+        for s in score_names:
+            if not config.TESTING and s.startswith("test"):
+                msg = f"Skipping '{s}' from package {package_name}"
                 logger.info(msg)
-                return None, msg, 400
-            score: "Score" = ScoreSchema().load(score_dict)
+                continue
+
+            read_score(s, package_name)
+
+
+# read a 'score' (yaml file describing experiment/scenario) from python package resources
+def read_score(
+    score_name: str,
+    package_name: str = None,
+    score_dir: str = "scores",
+) -> Tuple[Optional[Dict[str, Any]], Optional[str], int]:
+    if package_name in config.PLUGINS_EXCLUDE:
+        msg = f"Skipping {score_name} due to package '{package_name}' exclusion"
+        logger.info(msg)
+        return None, msg, 400
+
+    try:
+        # util._validate_score_name_dir
+        score_str = util.get_score_str(score_name, package_name, score_dir)
+        if not score_str:
+            return None, "score not found", 404
+
+        score_dict = yaml.load(score_str)
+        score: "Score" = ScoreSchema().load(score_dict)
+        score.package = package_name
     except (YAMLError, YAMLWarning, YAMLFutureWarning) as e:
         msg = f"score '{score_name}' YAML failed to parse:\n{str(e)}"
         logger.warning(msg)
         return None, msg, 400
-    except MarshmallowValidationError as e:
+    except marshmallow.ValidationError as e:
         msg = f"score '{score_name}' failed validation:\n{str(e)}"
         logger.warning(msg)
         return None, msg, 400
@@ -101,54 +92,14 @@ def _read_score_by_path(
         return None, msg, 500
     except Exception as e:
         logger.exception(e)
-        msg = (
-            f"unexpected exception while reading score '{score_name}'; see logs for"
-            " details"
-        )
+        msg = f"unexpected error reading score '{score_name}'; see logs for details"
         logger.warning(msg)
         return None, msg, 500
 
     scores[score.name] = score
-    logger.debug(f"read score '{score.name}' (file: '{filepath}')")
+    logger.debug(f"read score '{score_name}' from package '{package_name}'")
 
     return score_dict, None, 200
-
-
-# load a 'score' (yaml file describing experiment/scenario) from disk
-def read_score_by_name(
-    score_name: str,
-) -> Tuple[Optional[Dict[str, Any]], Optional[str], int]:
-    score_name = safe_name(score_name)
-
-    filepath = None
-    for p in get_score_paths():
-        if os.path.splitext(os.path.basename(p))[0] == score_name:
-            if filepath is not None:
-                logger.warning(
-                    f"Score {score_name} found in both {os.path.dirname(filepath)} and"
-                    f" {os.path.dirname(p)}"
-                )
-            filepath = p
-
-    if not filepath:
-        msg = f"score not found: {score_name}"
-        logger.warning(msg)
-        return None, msg, 400
-
-    # make sure file exists
-    if not os.path.isfile(filepath):
-        filepathyml = f"{filepath}.yml"
-        filepathyaml = f"{filepath}.yaml"
-        if os.path.isfile(filepathyml):
-            filepath = filepathyml
-        elif os.path.isfile(filepathyaml):
-            filepath = filepathyaml
-        else:
-            msg = f"score not found: {score_name}"
-            logger.warning(msg)
-            return None, msg, 400
-
-    return _read_score_by_path(filepath, score_name=score_name)
 
 
 async def api_read_score(request: "Request") -> "Response":
@@ -164,12 +115,12 @@ async def api_read_score(request: "Request") -> "Response":
         else:
             del scores[score_name]
 
-    score_dict, err_msg, status_code = read_score_by_name(score_name)
+    score_dict, err_msg, status_code = read_score(score_name)
 
     if score_dict:
-        return johann_response(True, [], data=score_dict, status_code=status_code)
+        return util.johann_response(True, [], data=score_dict, status_code=status_code)
     else:
-        return johann_response(False, err_msg, status_code=status_code)
+        return util.johann_response(False, err_msg, status_code=status_code)
 
 
 async def get_scores(request: "Request") -> "Response":
@@ -185,7 +136,7 @@ async def get_scores(request: "Request") -> "Response":
         ret[score.category].sort(key=lambda t: t["name"])
 
     ret = OrderedDict(sorted(ret.items(), key=lambda t: t[0]))  # sort by category
-    return johann_response(True, [], data=ret)
+    return util.johann_response(True, [], data=ret)
 
 
 async def get_hosts(request: "Request") -> "Response":
@@ -196,7 +147,7 @@ async def get_hosts(request: "Request") -> "Response":
     for name, host in hosts.items():
         ret[name] = {"name": host.name, "image": host.get_image()}
 
-    return johann_response(True, [], data=ret)
+    return util.johann_response(True, [], data=ret)
 
 
 async def get_score(request: "Request") -> "Response":
@@ -204,10 +155,10 @@ async def get_score(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     score_name = request.match_info["score_name"]
     if score_name not in scores:
-        return johann_response(False, f"unrecognized score '{score_name}'", 404)
+        return util.johann_response(False, f"unrecognized score '{score_name}'", 404)
 
     score = scores[score_name]
-    return johann_response(True, [], data=score.dump())
+    return util.johann_response(True, [], data=score.dump())
 
 
 async def get_host(request: "Request") -> "Response":
@@ -215,15 +166,15 @@ async def get_host(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     host_name = request.match_info["host_name"]
     if host_name not in hosts:
-        return johann_response(False, f"unrecognized host '{host_name}'", 404)
+        return util.johann_response(False, f"unrecognized host '{host_name}'", 404)
 
     host = hosts[host_name]
-    return johann_response(True, [], data=host.dump())
+    return util.johann_response(True, [], data=host.dump())
 
 
 # read json file providing hosts to seed Johann with (vice adding via /add_hosts or via the GUI)
 def read_hosts_file(file_path: Path) -> Tuple[bool, List[str]]:
-    file_path: Path = Path(safe_name(str(file_path)))
+    file_path: Path = Path(util.safe_name(str(file_path)))
     if not file_path.is_file():
         msg = f"Provided hosts file does not exist: '{file_path}'"
         logger.warning(msg)
@@ -254,7 +205,7 @@ def read_hosts_file(file_path: Path) -> Tuple[bool, List[str]]:
         msg = "unable to parse hosts file '{}': {}".format(file_path, str(e))
         logger.warning(msg)
         return False, [msg]
-    except MarshmallowValidationError as e:
+    except marshmallow.ValidationError as e:
         msg = "one or more hosts in '{}' failed validation:\n{}".format(
             file_path, str(e)
         )
@@ -281,7 +232,7 @@ def _update_hosts(
         try:
             h: "Host" = HostSchema().load(h_data)
             valid_hosts.append(h)
-        except MarshmallowValidationError as e:
+        except marshmallow.ValidationError as e:
             msg = f"invalid host data provided ({h_name}): {str(e)}"
             logger.warning(msg)
             err_msgs.append(msg)
@@ -322,7 +273,7 @@ async def add_hosts(request: "Request") -> "Response":
     except json.JSONDecodeError as e:
         msg = "add_hosts: invalid json"
         logger.warning(f"{msg}\n{str(e)}")
-        return johann_response(False, msg, 400)
+        return util.johann_response(False, msg, 400)
 
     logger.debug("add_hosts endpoint called")
     if "hosts" in data and isinstance(data["hosts"], dict):
@@ -331,13 +282,13 @@ async def add_hosts(request: "Request") -> "Response":
         )
 
         if not success:
-            return johann_response(False, err_msgs, 400)
+            return util.johann_response(False, err_msgs, 400)
         else:
-            return johann_response(True, [], data=successful_hostnames)
+            return util.johann_response(True, [], data=successful_hostnames)
     else:
         msg = "invalid format for key 'hosts'"
         logger.warning(msg)
-        return johann_response(False, msg, 400)
+        return util.johann_response(False, msg, 400)
 
 
 async def get_score_raw(request: "Request") -> "Response":
@@ -345,10 +296,10 @@ async def get_score_raw(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     score_name = request.match_info["score_name"]
     if score_name not in scores:
-        return johann_response(False, f"unrecognized score '{score_name}'", 404)
+        return util.johann_response(False, f"unrecognized score '{score_name}'", 404)
 
     score = scores[score_name]
-    return johann_response(
+    return util.johann_response(
         True, [], data=score.dump(exclude_local=False, yaml_fields_only=False)
     )
 
@@ -358,10 +309,10 @@ async def get_score_status(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     score_name = request.match_info["score_name"]
     if score_name not in scores:
-        return johann_response(False, f"unrecognized score '{score_name}'", 404)
+        return util.johann_response(False, f"unrecognized score '{score_name}'", 404)
 
     score = scores[score_name]
-    return johann_response(True, [], data=score.get_status())
+    return util.johann_response(True, [], data=score.get_status())
 
 
 async def get_score_status_short(request: "Request") -> "Response":
@@ -369,10 +320,10 @@ async def get_score_status_short(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     score_name = request.match_info["score_name"]
     if score_name not in scores:
-        return johann_response(False, f"unrecognized score '{score_name}'", 404)
+        return util.johann_response(False, f"unrecognized score '{score_name}'", 404)
 
     score = scores[score_name]
-    return johann_response(True, [], data=score.get_status(short=True))
+    return util.johann_response(True, [], data=score.get_status(short=True))
 
 
 async def get_score_status_alt(request: "Request") -> "Response":
@@ -380,7 +331,7 @@ async def get_score_status_alt(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     score_name = request.match_info["score_name"]
     if score_name not in scores:
-        return johann_response(False, f"unrecognized score '{score_name}'", 404)
+        return util.johann_response(False, f"unrecognized score '{score_name}'", 404)
 
     score = scores[score_name]
     status = score.get_status(short=False)
@@ -413,7 +364,7 @@ async def get_score_status_alt(request: "Request") -> "Response":
     ret["status"] = ret["state"]
     ret["measures"] = measures
     ret["raw"] = status
-    return johann_response(True, [], data=ret)
+    return util.johann_response(True, [], data=ret)
 
 
 async def get_score_measures(request: "Request") -> "Response":
@@ -421,10 +372,10 @@ async def get_score_measures(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     score_name = request.match_info["score_name"]
     if score_name not in scores:
-        return johann_response(False, f"unrecognized score '{score_name}'", 404)
+        return util.johann_response(False, f"unrecognized score '{score_name}'", 404)
 
     score = scores[score_name]
-    return johann_response(True, [], data=[x.name for x in score.measures])
+    return util.johann_response(True, [], data=[x.name for x in score.measures])
 
 
 def _get_measure_helper(
@@ -449,9 +400,9 @@ async def get_measure(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     measure, msg = _get_measure_helper(request)
     if not measure:
-        return johann_response(False, msg, 404)
+        return util.johann_response(False, msg, 404)
 
-    return johann_response(True, [], data=measure.dump())
+    return util.johann_response(True, [], data=measure.dump())
 
 
 async def get_measure_status(request: "Request") -> "Response":
@@ -459,9 +410,9 @@ async def get_measure_status(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     measure, msg = _get_measure_helper(request)
     if not measure:
-        return johann_response(False, msg, 404)
+        return util.johann_response(False, msg, 404)
 
-    return johann_response(True, [], data=measure.get_status())
+    return util.johann_response(True, [], data=measure.get_status())
 
 
 async def manually_play_measure(request: "Request") -> "Response":
@@ -470,12 +421,14 @@ async def manually_play_measure(request: "Request") -> "Response":
     score_name = request.match_info["score_name"]
     measure_name = request.match_info["measure_name"]
     if score_name not in scores:
-        return johann_response(False, f"unrecognized score '{score_name}'", 404)
+        return util.johann_response(False, f"unrecognized score '{score_name}'", 404)
 
     score = scores[score_name]
     measure_names = [x.name for x in score.measures]
     if measure_name not in measure_names:
-        return johann_response(False, f"unrecognized measure '{measure_name}'", 404)
+        return util.johann_response(
+            False, f"unrecognized measure '{measure_name}'", 404
+        )
 
     measure = [x for x in score.measures if x.name == measure_name][0]
     m = measure
@@ -488,7 +441,7 @@ async def manually_play_measure(request: "Request") -> "Response":
             msg = f"Forcing re-play of measure '{m.name}'"
             logger.warning(msg)
         else:
-            return johann_response(
+            return util.johann_response(
                 False,
                 "measure already played/playing; to run anyway, include query param"
                 " 'force=true'",
@@ -499,7 +452,7 @@ async def manually_play_measure(request: "Request") -> "Response":
         logger.info(msg)
 
     score.queue_measure(m)
-    return johann_response(True, msg)
+    return util.johann_response(True, msg)
 
 
 async def roll_call(request: "Request") -> "Response":
@@ -507,14 +460,14 @@ async def roll_call(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     score_name = request.match_info["score_name"]
     if score_name not in scores:
-        return johann_response(False, f"unrecognized score '{score_name}'", 404)
+        return util.johann_response(False, f"unrecognized score '{score_name}'", 404)
 
     logger.debug(f"{request.method} roll_call for score '{score_name}'")
     score = scores[score_name]
 
     # make sure score isn't already running (e.g. by another user)
     if score.started_at and not score.finished:
-        return johann_response(False, "score already playing", 400)
+        return util.johann_response(False, "score already playing", 400)
 
     # update score/players if changed
     if request.method == "POST":
@@ -527,10 +480,10 @@ async def roll_call(request: "Request") -> "Response":
             for p_name, p_data in data["players"].items():
                 try:
                     p: "Player" = PlayerSchema().load(p_data)
-                except MarshmallowValidationError as e:
+                except marshmallow.ValidationError as e:
                     msg = f"invalid player data provided ({p_name}): {str(e)}"
                     logger.warning(f"roll_call: {msg}")
-                    return johann_response(False, msg, 400)
+                    return util.johann_response(False, msg, 400)
 
                 posted_players[p.name] = p
                 if p.name in score.players:
@@ -546,11 +499,11 @@ async def roll_call(request: "Request") -> "Response":
                     else:
                         msg = f"failed to update player '{p.name}': {err_msg}"
                         logger.warning(f"roll_call: {msg}")
-                        return johann_response(False, msg, 400)
+                        return util.johann_response(False, msg, 400)
                 else:
                     msg = f"unrecognized player: '{p.name}'"
                     logger.warning(f"roll_call: {msg}")
-                    return johann_response(False, msg, 400)
+                    return util.johann_response(False, msg, 400)
         else:
             logger.warning(
                 "roll_call: POST missing or invalid format for key 'players'"
@@ -560,10 +513,10 @@ async def roll_call(request: "Request") -> "Response":
     success, err_msgs = score.validate_create_host_mappings()
     if not success:
         logger.warning(f"{score_name}: errors validating host mappings:\n{err_msgs}")
-        return johann_response(False, err_msgs, 400)
+        return util.johann_response(False, err_msgs, 400)
     else:
         score.last_successful_roll_call = datetime.utcnow()
-        return johann_response(
+        return util.johann_response(
             True, "roll_call successful; you are now free to cue the music"
         )
 
@@ -573,12 +526,12 @@ async def cue_the_music(request: "Request") -> "Response":
         logger.debug(f"{request.url}")
     score_name = request.match_info["score_name"]
     if score_name not in scores:
-        return johann_response(False, f"unrecognized score '{score_name}'", 404)
+        return util.johann_response(False, f"unrecognized score '{score_name}'", 404)
     score = scores[score_name]
 
     # make sure score isn't already running (e.g. by another user)
     if score.started_at and not score.finished:
-        return johann_response(False, "score already playing", 400)
+        return util.johann_response(False, "score already playing", 400)
 
     # make sure each Player in the Score is matched to actual entities/containers
     success, err_msgs = score.validate_create_host_mappings()
@@ -586,13 +539,13 @@ async def cue_the_music(request: "Request") -> "Response":
         logger.warning(
             f"{score.name}: tuning failed; errors validating host mappings:\n{err_msgs}"
         )
-        return johann_response(False, err_msgs, 400)
+        return util.johann_response(False, err_msgs, 400)
 
     task = asyncio.ensure_future(score.play())
-    task = wrap_future(task, score.name, None, score_or_measure=score)
+    task = util.wrap_future(task, score.name, None, score_or_measure=score)
     asyncio.ensure_future(task)
 
-    return johann_response(True, "score is playing")
+    return util.johann_response(True, "score is playing")
 
 
 async def retrieve_stored_data_all(request: "Request") -> "Response":
@@ -660,17 +613,17 @@ async def _retrieve_stored_data(
     subsubsubkey: Optional[str] = None,
 ) -> "Response":
     if score_name not in scores:
-        return johann_response(False, f"unrecognized score '{score_name}'", 404)
+        return util.johann_response(False, f"unrecognized score '{score_name}'", 404)
     score = scores[score_name]
 
     success, msg, code, data = score.fetch_stored_data(
         key, subkey, subsubkey, subsubsubkey
     )
     logger.debug(f"retrieve_stored_data API call: {msg}")
-    return johann_response(success, msg, code, data=data)
+    return util.johann_response(success, msg, code, data=data)
 
 
 async def api_get_codehash(request: "Request") -> "Response":
     if config.TRACE:
         logger.debug(f"{request.url}")
-    return johann_response(True, [], data=get_codehash())
+    return util.johann_response(True, [], data=util.get_codehash())

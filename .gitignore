@@ -188,16 +188,14 @@ tags
 *.pycharm_helpers
 
 # additional Environments
-.env_* 
+.env_*
 
 # johann-specific
 johann*.log
 johann*.log.*
 johann*.pid
 johann/celeryd.pid
-johann/plugins
-johann/requirements_base.txt
-johann/requirements_plugins.txt
+johann/requirements.txt
 johann/run_conductor_pmtr*
 !johann/run_conductor_pmtr.default.sh
 !johann/run_conductor_pmtr.dev.sh
@@ -206,3 +204,6 @@ johann/run_player_pmtr*
 !johann/run_player_pmtr.dev.sh
 *.creds
 *.hosts.y*ml
+local_packages
+./plugins.txt
+johann/plugins.txt
