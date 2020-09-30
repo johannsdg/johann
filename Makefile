@@ -132,7 +132,6 @@ pypiserver: prep
 	# prep starts pypiserver for us
 
 dev-venv:
-	rm -rf ./venv
 	python3 -m venv $(VENV_PATH)
 	$(VENV_PYTHON) -m pip install 'wheel>=0.33.6'
 	$(VENV_PYTHON) -m pip install -r requirements.txt -r requirements-dev.txt
