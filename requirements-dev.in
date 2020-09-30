@@ -4,6 +4,8 @@
 
 -c requirements.txt
 
+bump2version
+commitizen>=2.4.0
 mypy>=0.782
 pre-commit>=1.21.0
 pip-tools>=5.2.1

@@ -2,13 +2,15 @@
 # Use of this source code is governed by a BSD-3-clause license that can
 # be found in the LICENSE file. See the AUTHORS file for names of contributors.
 
-default_stages: [commit]
+default_stages: [commit, push]
 
 repos:
   - repo: meta
     hooks:
       - id: check-hooks-apply
+        stages: [manual]
       - id: check-useless-excludes
+        stages: [manual]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: master
@@ -23,9 +25,9 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
       - id: name-tests-test
-      # PLANNED: - id: check-json
+      - id: check-json
       - id: check-yaml
-        # PLANNED: exclude: tests/scores/malformed
+        exclude: tests/scores/malformed
 
   - repo: https://github.com/timothycrosley/isort
     rev: 5.0.2
@@ -42,7 +44,7 @@ repos:
     hooks:
       - id: prettier
         args: [--prose-wrap=always, --print-width=88]
-        # PLANNED: exclude: tests/scores/malformed
+        exclude: tests/scores/malformed
 
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.8.3
@@ -55,7 +57,7 @@ repos:
     rev: 5.2.1
     hooks:
       - id: pip-compile
-        args: [--quiet, --generate-hashes, --no-emit-index-url]
+        args: [--quiet, --no-header, --generate-hashes, --no-emit-index-url]
         files: ^((requirements(-.*)?\.(in|txt))|setup.py)$
       - id: pip-compile
         name: pip-compile-dev
@@ -63,6 +65,7 @@ repos:
           [
             --quiet,
             --allow-unsafe,
+            --no-header,
             --generate-hashes,
             --no-emit-index-url,
             --output-file=requirements-dev.txt,
@@ -83,6 +86,12 @@ repos:
       - id: pylint
         stages: [manual] # PLANNED: [commit]
 
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v2.4.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
   - repo: local
     hooks:
       - id: check-todo
@@ -91,12 +100,22 @@ repos:
         entry: (TODO|FIXME|FOOBAR|LEFT OFF HERE)
         args: [-i]
         exclude: .pre-commit-config.yaml
-        stages: [push]
       - id: check-copyright-headers
         name: check-copyright-headers
         language: script
         entry: scripts/check_copyright_headers.py
-        files: '.*\.py'
+        exclude: |
+          (?x)^(
+            \..+\.cfg|
+            \..+\.toml|
+            .*\.in|
+            .*\.md|
+            .*\.txt|
+            .gitignore|
+            AUTHORS|
+            LICENSE|
+            johann/\.dev_reload_file|
+          )$
       - id: mypy-local
         name: mypy-local
         entry: mypy
