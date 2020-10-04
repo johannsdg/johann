@@ -4,19 +4,30 @@
 
 version: "2.4"
 
-# Note: do not alter the build process of any services in docker-compose.dev.yml
 services:
   johann_conductor:
+    build:
+      args:
+        - PLUGINS_FILE=tests/plugins.txt
     environment:
+      - DEBUG=1
+      - LOG_LEVEL=10
+      - TESTING=1
+
+  johann_player:
+    build:
+      args:
+        - PLUGINS_FILE=tests/plugins.txt
+    environment:
+      - DEBUG=1
       - LOG_LEVEL=10
       - TESTING=1
 
   tester:
     build:
       context: ${JOHANN_CORE_ROOT}/
-      dockerfile: build/Dockerfile.tester
+      dockerfile: docker/Dockerfile.tester
     volumes:
-      - ${JOHANN_CORE_ROOT}/plugins:/opt/johann/johann/plugins
       - ${JOHANN_CORE_ROOT}/tests:/opt/johann/tests
     networks:
       - servicenet

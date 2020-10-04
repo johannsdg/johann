@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
 import requests
 
 from johann.shared.config import JohannConfig, celery_app
+from johann.shared.enums import TaskState
 from johann.shared.logger import JohannLogger
-from johann.util import TaskState, get_attr, get_codehash
+from johann.util import get_attr, get_codehash
 
 if TYPE_CHECKING:
     from celery import Task
@@ -45,7 +46,7 @@ def get_hostname(celery_request: "Request") -> Optional[str]:
 
 @celery_app.task(bind=True)
 def select_random(
-    self: "Task", select_from: Union[List, Dict], num_select: int
+    self: "Task", select_from: Union[List, Dict], num_select: int, values_only=False
 ) -> Dict[int, Any]:
     assert type(select_from) in [list, dict]
 
@@ -73,7 +74,12 @@ def select_random(
             ret.append(item)
 
     dict_ret = {index: selection for index, selection in enumerate(ret)}
-    ret = dict_ret
+    if num_select == 1:
+        ret = list(dict_ret.values())[0]
+    elif values_only:
+        ret = list(dict_ret.values())
+    else:
+        ret = dict_ret
 
     return ret
 

@@ -8,8 +8,9 @@ from celery import group, signature
 from marshmallow import Schema, fields, post_load
 
 from johann.shared.config import JohannConfig, hosts
+from johann.shared.fields import NameField
 from johann.shared.logger import JohannLogger
-from johann.util import NameField, gudlog
+from johann.util import gudlog
 
 if TYPE_CHECKING:
     from celery.canvas import Signature

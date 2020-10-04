@@ -33,7 +33,9 @@ def get_host_control_class(
     return host_control_class, None
 
 
-def get_host_names(control_methods: Optional[List[str]] = None,) -> List[str]:
+def get_host_names(
+    control_methods: Optional[List[str]] = None,
+) -> List[str]:
     if not control_methods:
         control_methods = config.HOST_CONTROL_CLASS_NAMES.keys()
     ret = []

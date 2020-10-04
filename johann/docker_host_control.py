@@ -6,14 +6,12 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import docker
 from docker.errors import DockerException
-
 from johann.host_control import HostControl
 from johann.shared.config import JohannConfig
 from johann.shared.logger import JohannLogger
 
 if TYPE_CHECKING:
     from docker.models.containers import Container
-
     from johann.host import Host
     from johann.util import PathLikeObj
 

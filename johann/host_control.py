@@ -8,14 +8,9 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from johann.shared.config import JohannConfig
+from johann.shared.enums import HostOS, PmtrVariant
 from johann.shared.logger import JohannLogger
-from johann.util import (
-    HostOS,
-    PmtrVariant,
-    create_johann_tarball,
-    get_codehash,
-    py_to_clistr,
-)
+from johann.util import create_johann_tarball, get_codehash, py_to_clistr
 
 if TYPE_CHECKING:
     from johann.host import Host
@@ -118,26 +113,26 @@ class HostControl(ABC):
     def install_pip_dependencies(
         self, workpath: "PathLikeObj", python_verstr: str
     ) -> Tuple[bool, Optional[str]]:
-        cmd = f'/bin/sh -ec "{self.python_path} -m pip install'
+        pip_cmd = f"{self.python_path} -m pip install"
         if self.user:
-            cmd += " --user"
+            pip_cmd += " --user"
         if self.pip_offline_install:
             # offline install
             logger.debug(f"{self.name}: Using offline pip install")
-            # cmd += f" --no-index -f minirepo -r {workpath}/requirements.{python_verstr}.txt"
-            cmd += (
-                f" --no-index -f minirepo -r {str(workpath)}/requirements_base.txt"
-                f" -r {str(workpath)}/requirements_plugins.txt"
-            )
+            pip_cmd += f" --no-index -f minirepo -r {str(workpath)}/requirements.txt"
         else:
             # online install:
             logger.debug(f"{self.name}: Using online pip install")
-            # cmd += f" -r {workpath}/requirements.{python_verstr}.txt --retries=2 --timeout=5"
-            cmd += (
-                f" --retries=2 --timeout=5 -r {str(workpath)}/requirements_base.txt"
-                f" -r {str(workpath)}/requirements_plugins.txt"
+            pip_cmd += (
+                f" --index={config.PYPI_INDEX_URL} --retries=2 --timeout=3"
+                f" --trusted-host {config.PYPI_INDEX_HOST}"
             )
-        cmd += ' --disable-pip-version-check"'
+        pip_cmd += " --disable-pip-version-check"
+        # install plugins.txt separately so that it doesn't have to have hashes
+        cmd = (
+            f'/bin/sh -ec "{pip_cmd} -r {str(workpath)}/requirements.txt && {pip_cmd}'
+            f' -r {str(workpath)}/plugins.txt"'
+        )
 
         exit_code, output = self.run_cmd(cmd, workpath=workpath)
         if exit_code:
@@ -172,7 +167,7 @@ class HostControl(ABC):
             raise NotImplementedError
         exit_code, output = self.run_cmd(
             cmd, environment=environment, detach=detach, workpath=workpath
-        )  # TODO make sure environment in all subclass implementations
+        )
         if not detach and exit_code:
             errmsg = (
                 f"possible issues {'disabling' if disable else 'enabling'} Johann:"
@@ -510,7 +505,7 @@ with open("{dest_path_inc_filename}", 'rb') as f:
             }
             if self.user:  # don't want to store 'None' string
                 conf["CELERY_USER"] = self.user
-            # TODO
+            # PLANNED:
             # if config.PLUGINS_EXCLUDE:
             #     conf["PLUGINS_EXCLUDE"] = json.dumps(config.PLUGINS_EXCLUDE)
             try:

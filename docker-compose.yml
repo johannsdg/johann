@@ -20,9 +20,10 @@ services:
 
   johann_conductor:
     container_name: johann_conductor
+    hostname: johann_conductor
     build:
       context: ${JOHANN_CORE_ROOT}/
-      dockerfile: build/Dockerfile.conductor
+      dockerfile: docker/Dockerfile.conductor
     image: johann_conductor
     environment:
       - ENV_FILE=.env_conductor
@@ -37,21 +38,35 @@ services:
       - redis
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${JOHANN_CORE_ROOT}/plugins:/opt/johann/johann/plugins
+    networks:
+      - public
+      - servicenet
+
+  pypiserver:
+    container_name: pypiserver
+    hostname: pypiserver
+    image: pypiserver/pypiserver:v1.3.2
+    volumes:
+      - type: bind
+        source: ${JOHANN_CORE_ROOT}/local_packages
+        target: /data/packages
+    ports:
+      - "127.0.0.1:8080:8080"
+    expose:
+      - "8080"
     networks:
       - public
       - servicenet
 
   johann_player:
     container_name: johann_player_1
+    hostname: johann_player_1
     build:
       context: ${JOHANN_CORE_ROOT}/
-      dockerfile: build/Dockerfile.player
+      dockerfile: docker/Dockerfile.player
     image: johann_player_base
     environment:
       - CELERY_QUEUE_ID=johann_player_1
-    volumes:
-      - ${JOHANN_CORE_ROOT}/plugins:/opt/johann/johann/plugins
     networks:
       - servicenet
     depends_on:

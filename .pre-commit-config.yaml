@@ -1,12 +1,15 @@
 # Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
 # Use of this source code is governed by a BSD-3-clause license that can
 # be found in the LICENSE file. See the AUTHORS file for names of contributors.
-exclude: "docs|.git|.tox"
+
 default_stages: [commit]
-default_language_version:
-  python: python3.6
 
 repos:
+  - repo: meta
+    hooks:
+      - id: check-hooks-apply
+      - id: check-useless-excludes
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: master
     hooks:
@@ -20,9 +23,9 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
       - id: name-tests-test
-      - id: check-json
+      # PLANNED: - id: check-json
       - id: check-yaml
-        exclude: tests/scores/malformed
+        # PLANNED: exclude: tests/scores/malformed
 
   - repo: https://github.com/timothycrosley/isort
     rev: 5.0.2
@@ -30,8 +33,7 @@ repos:
       - id: isort
 
   - repo: https://github.com/psf/black
-    #rev: stable
-    rev: cc2facaac69a8ffa4486e6fe498842debb17ce12
+    rev: stable
     hooks:
       - id: black
 
@@ -40,7 +42,7 @@ repos:
     hooks:
       - id: prettier
         args: [--prose-wrap=always, --print-width=88]
-        exclude: tests/scores/malformed
+        # PLANNED: exclude: tests/scores/malformed
 
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.8.3
@@ -74,3 +76,32 @@ repos:
       - id: bandit
         entry: bandit -lll
         exclude: tests
+
+  - repo: https://github.com/PyCQA/pylint
+    rev: master
+    hooks:
+      - id: pylint
+        stages: [manual] # PLANNED: [commit]
+
+  - repo: local
+    hooks:
+      - id: check-todo
+        name: check-todo
+        language: pygrep
+        entry: (TODO|FIXME|FOOBAR|LEFT OFF HERE)
+        args: [-i]
+        exclude: .pre-commit-config.yaml
+        stages: [push]
+      - id: check-copyright-headers
+        name: check-copyright-headers
+        language: script
+        entry: scripts/check_copyright_headers.py
+        files: '.*\.py'
+      - id: mypy-local
+        name: mypy-local
+        entry: mypy
+        language: system
+        types: [python]
+        args: ["--ignore-missing-imports", "--scripts-are-modules"]
+        require_serial: true
+        stages: [manual] # PLANNED: [commit]

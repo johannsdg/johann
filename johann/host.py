@@ -13,16 +13,10 @@ from marshmallow import fields, post_load, validates
 from marshmallow_enum import EnumField
 
 from johann.shared.config import JohannConfig, celery_app
+from johann.shared.enums import HostOS, PmtrVariant, TaskState
+from johann.shared.fields import LaxStringField, NameField
 from johann.shared.logger import JohannLogger
-from johann.util import (
-    HostOS,
-    LaxStringField,
-    NameField,
-    PmtrVariant,
-    TaskState,
-    gudlog,
-    safe_name,
-)
+from johann.util import gudlog, safe_name
 
 if TYPE_CHECKING:
     from celery.canvas import Signature

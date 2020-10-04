@@ -2,11 +2,6 @@
 # Use of this source code is governed by a BSD-3-clause license that can
 # be found in the LICENSE file. See the AUTHORS file for names of contributors.
 
--c requirements.txt
+"""Johann, lightweight and flexible scenario orchestration"""
 
-mypy>=0.782
-pre-commit>=1.21.0
-pip-tools>=5.2.1
-pytest
-safety
-twine
+__version__ = "0.1.0a0"

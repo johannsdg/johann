@@ -10,11 +10,10 @@ from marshmallow import ValidationError as MarshmallowValidationError
 from marshmallow import fields, post_load, validates
 
 from johann.shared.config import JohannConfig
+from johann.shared.enums import TaskState
+from johann.shared.fields import NameField, StateField
 from johann.shared.logger import JohannLogger
 from johann.util import (
-    NameField,
-    StateField,
-    TaskState,
     celery_group_status,
     get_attr,
     gudlog,
@@ -54,7 +53,8 @@ class MeasureSchema(Schema):
     status = fields.Dict(
         keys=fields.Str(),  # player
         values=fields.Dict(
-            keys=fields.Str(), values=fields.Str(),  # host, host status
+            keys=fields.Str(),
+            values=fields.Str(),  # host, host status
         ),
         dump_only=True,
     )

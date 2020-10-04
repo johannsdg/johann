@@ -1,0 +1,61 @@
+# Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
+# Use of this source code is governed by a BSD-3-clause license that can
+# be found in the LICENSE file. See the AUTHORS file for names of contributors.
+
+ARG BASE_IMAGE=python:3.7-buster
+FROM $BASE_IMAGE
+
+WORKDIR /opt
+USER 0
+
+# Ensure latest packages
+RUN apt-get update && apt-get upgrade -y
+
+WORKDIR /opt
+
+# get pmtr
+RUN git clone https://github.com/troydhanson/pmtr.git
+
+WORKDIR /opt/pmtr
+
+# Install pmtr
+RUN ./autogen.sh
+RUN ./configure --bindir=/usr/bin --sysconfdir=/etc
+RUN make -j ${nproc} && make install
+
+WORKDIR /opt
+
+RUN rm -r pmtr
+
+ARG JOHANN_PYTHON=/usr/local/bin/python3
+ENV JOHANN_PYTHON=$JOHANN_PYTHON
+ARG PIP_INDEX_URL=https://pypi.org/simple
+ENV PIP_INDEX_URL=$PIP_INDEX_URL
+
+WORKDIR /opt/johann/johann
+
+# Install Johann requirements
+COPY requirements.txt ./
+RUN $JOHANN_PYTHON -m pip install -r requirements.txt
+
+WORKDIR /opt/johann
+
+# Install Johann
+COPY ./ ./
+RUN $JOHANN_PYTHON -m pip install -e .
+
+WORKDIR /opt/johann/johann
+
+# Install plugins
+ARG PLUGINS_FILE=plugins.txt
+ENV PLUGINS_FILE=$PLUGINS_FILE
+
+COPY $PLUGINS_FILE ./plugins.txt
+RUN $JOHANN_PYTHON -m pip install -r plugins.txt
+
+WORKDIR /opt/johann
+
+# Run Johann and any other programs via pmtr
+ARG RUN_PMTR_SUFFIX=default
+ENV RUN_PMTR_SUFFIX=$RUN_PMTR_SUFFIX
+CMD /bin/bash /opt/johann/johann/run_player_pmtr.$RUN_PMTR_SUFFIX.sh

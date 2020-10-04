@@ -1,24 +1,22 @@
 # Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
 # Use of this source code is governed by a BSD-3-clause license that can
 # be found in the LICENSE file. See the AUTHORS file for names of contributors.
+
 import asyncio
 import atexit
 import os
 import signal
 import subprocess
-from importlib import import_module
-from pkgutil import iter_modules
 from typing import TYPE_CHECKING, Tuple
 from uuid import uuid4
 
 import redis
 
-import johann.plugins
 import johann.tasks_main  # noqa
 import johann.tasks_util  # noqa
 from johann import util
 from johann.conductor_app import init_conductor
-from johann.shared.config import JohannConfig, discovered_plugins, workers
+from johann.shared.config import JohannConfig, workers
 from johann.shared.logger import JohannLogger
 
 if TYPE_CHECKING:
@@ -54,7 +52,7 @@ def add_workers_helper(
     cmd = (
         f'/bin/sh -ec ". $HOME/.profile && PYTHONPATH={config.PROJECT_ROOT} celery '
         f"-A {config.CELERY_TASKS_MODULE} worker {'-D' if config.CELERY_DETACH else ''}"
-        f" {'--purge ' if purge else ''}--autoscale={workers_min},{workers_max} -Q"
+        f" {'--purge ' if purge else ''}--autoscale={workers_max},{workers_min} -Q"
         f' {queue_id} -n {worker_name} -Ofair"'
     )
     logger.debug(f"celery command: {cmd}")
@@ -82,7 +80,7 @@ def add_workers_helper(
     workers.append(proc)
 
     msg = (
-        f"added worker {worker_name} with --autoscale={workers_min},{workers_max} to"
+        f"added worker {worker_name} with autoscale to"
         f" {queue_id}; worker process count = {len(workers)}"
     )
     logger.debug(msg)
@@ -98,22 +96,8 @@ def cleanup() -> None:
 if __name__ == "__main__":
     logger.info("********** Starting Johann **********")
 
-    for _finder, name, _ispkg in iter_modules(
-        johann.plugins.__path__, johann.plugins.__name__ + "."
-    ):
-        exclude = False
-        for p in config.PLUGINS_EXCLUDE:
-            if str.endswith(name, p):
-                exclude = True
-                logger.info(f"Excluding {name}")
-        if not exclude:
-            discovered_plugins.append(name)
-
-    if discovered_plugins:
-        logger.info("********** Loading Plugins **********")
-        logger.info(f"Discovered plugins: {', '.join(discovered_plugins)}")
-        for plugin in discovered_plugins:
-            import_module(plugin)
+    logger.info("********** Loading Plugins **********")
+    util.load_plugins()
 
     logger.info(f"********** Queue ID: {config.CELERY_QUEUE_ID} **********")
 
@@ -138,23 +122,30 @@ if __name__ == "__main__":
         logger.debug(f"Wrote PID to '{config.PID_FILE}'")
 
     # check Redis connection
-
-    logger.debug("********** Pinging Redis **********")
-    r = redis.StrictRedis(
-        config.REDIS_HOST, config.REDIS_PORT, config.REDIS_DB, socket_connect_timeout=10
-    )
-    if r.ping():
-        logger.debug("********** Redis Ping Successful **********")
-    else:
-        logger.error(f"unable to ping Redis server at {config.REDIS_URL}")
-        raise SystemError
+    if not config.SKIP_REDIS:
+        logger.debug("********** Pinging Redis **********")
+        r = redis.StrictRedis(
+            config.REDIS_HOST,
+            config.REDIS_PORT,
+            config.REDIS_DB,
+            socket_connect_timeout=10,
+        )
+        if r.ping():
+            logger.debug("********** Redis Ping Successful **********")
+        else:
+            logger.error(f"unable to ping Redis server at {config.REDIS_URL}")
+            raise SystemError
 
     # celery workers
     if not config.SKIP_CELERY:
         logger.debug(
             f"Killing any extant celery workers for {config.CELERY_TASKS_MODULE}"
         )
-        cmd = ["pkill", "-f", f"'celery -A {config.CELERY_TASKS_MODULE}'"]
+        cmd = [
+            "pkill",
+            "-f",
+            f"'celery -A {config.CELERY_TASKS_MODULE}'",
+        ]
         subprocess.run(cmd, encoding="utf-8")
 
         logger.info("********** Starting Workers **********")

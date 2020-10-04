@@ -1,28 +1,28 @@
 # Copyright (c) 2019-present, The Johann Authors. All Rights Reserved.
 # Use of this source code is governed by a BSD-3-clause license that can
 # be found in the LICENSE file. See the AUTHORS file for names of contributors.
+import glob
+import hashlib
+import importlib
 import json
+import os.path
+import pkgutil
 import random
 import re
 import subprocess
 import sys
-import unicodedata
-from enum import Enum
-from glob import glob
-from hashlib import sha256
+from pathlib import PurePath
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 import aiohttp.web
-from marshmallow import ValidationError as MarshmallowValidationError
-from marshmallow import fields
-from pydantic.errors import _PathValueError
+import pkg_resources
 
-from johann.shared.config import JohannConfig
+from johann.shared.config import JohannConfig, active_plugins, celery_app
+from johann.shared.enums import TaskState
 from johann.shared.logger import JohannLogger
 
 if TYPE_CHECKING:
     from asyncio import Future
-    from pathlib import PurePath
     from typing import TypeVar
 
     from celery.result import AsyncResult, GroupResult
@@ -37,97 +37,6 @@ if TYPE_CHECKING:
 
 config = JohannConfig.get_config()
 logger = JohannLogger(__name__).logger
-
-
-class PathNotSafeError(_PathValueError):
-    code = "path.not_safe"
-    msg_template = 'path "{path}" is not safe'
-
-
-class JohannError(Exception):
-    def __init__(self, msg):
-        self.msg = msg
-
-
-class StrEnum(str, Enum):
-    pass
-
-
-class TaskState(StrEnum):
-    # shared with State
-    FAILURE = "FAILURE"
-    SUCCESS = "SUCCESS"
-    PENDING = "PENDING"
-    STARTED = "STARTED"
-    RETRY = "RETRY"
-    PROGRESS = "PROGRESS"
-    QUEUED = "QUEUED"
-    DEFERRED = "DEFERRED"  # waiting on a dependency before being queued
-
-
-class PmtrVariant(StrEnum):
-    NONE = "NONE"
-    DEVUDP = "DEVUDP"  # NOTE: requires bash (e.g., won't work on vanilla Alpine)
-
-
-class HostOS(StrEnum):
-    LINUX = "LINUX"
-    WINDOWS = "WINDOWS"
-    # DARWIN = 'DARWIN'
-
-
-class NameField(fields.String):
-    """A name field."""
-
-    default_error_messages = {
-        "invalid_name": (
-            "Names may only consist of letters, numbers, underscores, and hyphens"
-        )
-    }
-
-    def _validated(self, value: Any) -> Optional[str]:
-        if value is None:
-            return None
-        if isinstance(value, str) and re.match(r"[\w\-]+", value):
-            return value
-        else:
-            raise self.make_error("invalid_name")
-
-    def _deserialize(self, value, attr, data, **kwargs) -> Optional[str]:
-        return self._validated(value)
-
-
-class LaxStringField(fields.String):
-    """A string field that will attempt to cast non-strings."""
-
-    default_error_messages = {"invalid_string": "neither a string nor castable to one"}
-
-    def _validated(self, value: Any) -> Optional[str]:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            return value
-        try:
-            return str(value)
-        except (ValueError, AttributeError, TypeError) as e:
-            raise self.make_error("invalid_string") from e
-
-    def _deserialize(self, value, attr, data, **kwargs) -> Optional[str]:
-        return self._validated(value)
-
-
-class StateField(fields.Field):
-    def _serialize(self, value, attr, obj, **kwargs):
-        if type(value) is str:
-            return value
-        else:
-            return value.value
-
-    def _deserialize(self, value, attr, data, **kwargs):
-        try:
-            return TaskState(value)
-        except ValueError:
-            raise MarshmallowValidationError("not a valid TaskState")
 
 
 def task_state_priority(state: TaskState) -> int:
@@ -165,15 +74,93 @@ def get_codehash() -> str:
     return config.CODEHASH
 
 
+def _validate_score_name_dir(
+    package_name: str, score_name: str, score_dir: str = "scores"
+) -> bool:
+
+    if safe_name(score_dir) != score_dir:
+        logger.debug(f"Invalid directory '{score_dir}'")
+        return False
+    elif safe_name(score_name) != score_name:
+        logger.debug(f"Invalid score name '{score_name}'")
+        return False
+    elif not pkg_resources.resource_isdir(package_name, score_dir):
+        logger.debug(f"Directory {score_dir} not found in package {package_name}")
+        return False
+    else:
+        return True
+
+
+def get_score_str(
+    score_name: str,
+    package_name: str = None,
+    score_dir: str = "scores",
+) -> Optional[str]:
+    if package_name:
+        return _get_score_str_helper(score_name, package_name, score_dir)
+
+    for plugin_name in active_plugins:
+        score_str = _get_score_str_helper(
+            score_name, plugin_name, score_dir, suppress_warnings=True
+        )
+        if score_str:
+            return score_str
+
+    return None
+
+
+def _get_score_str_helper(
+    score_name: str,
+    package_name: str,
+    score_dir: str = "scores",
+    suppress_warnings: bool = False,
+) -> Optional[str]:
+    """Get a package's score file as a string.
+
+    Args:
+        score_name:
+            The name of the score.
+        package_name:
+            The name of the Python package.
+        score_dir:
+            Optional; The package subdirectory in which to look. Defaults to "scores".
+        suppress_warnings:
+            Optional; Dont log warnings. Defaults to False.
+
+    Returns:
+        The score as a string, or None.
+    """
+    # validate score_name and score_dir
+    if not _validate_score_name_dir(package_name, score_name, score_dir):
+        return None
+
+    # try to read score with .yml and .yaml extensions
+    try:
+        score_path = f"{score_dir}/{score_name}.yml"
+        return pkg_resources.resource_string(package_name, score_path)
+    except FileNotFoundError:
+        try:
+            score_path = f"{score_dir}/{score_name}.yaml"
+            return pkg_resources.resource_string(package_name, score_path)
+        except FileNotFoundError:
+            logger.debug(f"'{score_name}' not found in '{score_dir}' of {package_name}")
+    except Exception:
+        if not suppress_warnings:
+            logger.warning(
+                f"Error fetching {score_name} from {package_name}", exc_info=True
+            )
+        return None
+
+
 def calculate_codehash() -> str:
     logger.debug("Getting codehash...")
     hashes = {}
     for pathname in config.CODEHASH_FILES:
-        filenames = glob(pathname)
+        filenames = glob.glob(pathname)
         for filename in filenames:
             try:
                 with open(filename, "rb") as f:
-                    filehash = sha256()
+                    filehash = hashlib.sha256()
                     filehash.update(f.read())
                     filehash = filehash.hexdigest()
                     logger.debug(f"{filehash} {filename}")
@@ -183,7 +170,7 @@ def calculate_codehash() -> str:
                     f"Error while getting codehash ('{filename}'): {e.strerror}"
                 )
                 continue
-    codehash = sha256()
+    codehash = hashlib.sha256()
     codehash.update(json.dumps(sorted(list(hashes.values()))).encode("utf-8"))
     codehash = codehash.hexdigest()
     logger.debug(f"Codehash: {codehash}")
@@ -221,12 +208,7 @@ async def wrap_future(
 
 
 def safe_name(value: str) -> str:
-    value = (
-        unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
-    )
-    value = re.sub(r"[^\w\s.-]", "", value).strip()
-    value = re.sub(r"[-\s]+", "_", value)
-    return value
+    return pkg_resources.to_filename(pkg_resources.safe_name(value))
 
 
 def gudexc(
@@ -445,6 +427,34 @@ def get_attr(attr_name: str) -> Tuple[Any, Optional[str]]:
         return attr, None
 
 
+def load_plugins():
+    discovered_plugins = []
+    exclusions = []
+    for _, name, _ in pkgutil.iter_modules():
+        if not name.startswith("johann_") or name == "johann_main":
+            continue
+        for p in config.PLUGINS_EXCLUDE:
+            if str.endswith(name, p):
+                exclusions.append(name)
+        discovered_plugins.append(name)
+
+    if discovered_plugins:
+        logger.info(f"Found: {', '.join(discovered_plugins)}")
+        if exclusions:
+            logger.info(f"Excluding: {', '.join(exclusions)}")
+        for plugin in discovered_plugins:
+            if plugin not in exclusions:
+                logger.debug(f"Importing {plugin}")
+                importlib.import_module(plugin)
+                active_plugins.append(plugin)
+    else:
+        logger.info("No plugins found")
+
+
+def celery_registered_tasks() -> List[str]:
+    return list(celery_app.tasks.keys())
+
+
 # Note: descends recursively into lists and dicts
 def transform_args(
     score: "Score", measure: "Measure", player: "Player", args: List
@@ -548,27 +558,40 @@ def transform_arg(score: "Score", measure: "Measure", player: "Player", a: str) 
         return a
 
 
-def boolystring(value: Union[bool, int, str]) -> Optional[bool]:
-    if isinstance(value, bool):
-        return value
-    elif isinstance(value, int):
-        return value > 0
-    elif isinstance(value, str):
-        if value.lower() in ["true", "t", "1", "y", "yes"]:
-            return True
-        elif value.lower() in ["false", "f", "0", "-1", "n", "no"]:
-            return False
-        else:
-            return None
-    else:
-        logger.debug(f"boolystring fail: ({type(value)}) {value}")
-        return None
+def resource_listdir_noext(package_name: str, directory: str) -> List[str]:
+    """Same as pkg_resources.resource_listdir but removes file extensions.
+
+    Args:
+        package_name: The name of the package.
+        directory: The name of the directory within the package.
+
+    Returns:
+        The resource filenames with their extensions removed.
+    """
+    resources = pkg_resources.resource_listdir(package_name, directory)
+    return [os.path.splitext(x)[0] for x in resources]
 
 
-def get_score_paths() -> List[str]:
-    return glob(f"{config.SRC_ROOT}/plugins/*/scores/*.y*ml") + glob(
-        f"{config.SCORE_PATH}/*.y*ml"
-    )
+def get_score_resources(score_dir: str = "scores") -> Dict[str, List[str]]:
+    """Gets the names of scores included in the packages of johann and any active plugins.
+
+    Args:
+        score_dir:
+            Optional; The name of the package subdirectory in which scores reside.
+            Defaults to "scores".
+
+    Returns:
+        A dict mapping package names to score resource names.
+    """
+    score_resources = {"johann": resource_listdir_noext("johann", score_dir)}
+    for plugin_name in active_plugins:
+        if not pkg_resources.resource_isdir(plugin_name, score_dir):
+            logger.debug(f"No '{score_dir}' directory in package {plugin_name}")
+            continue
+        plugin_scores = resource_listdir_noext(plugin_name, score_dir)
+        logger.debug(f"{plugin_name}: found these scores: {plugin_scores}")
+        score_resources[plugin_name] = plugin_scores
+    return score_resources
 
 
 def johann_response(

@@ -1,0 +1,2 @@
+include johann/scores/*.yml
+include johann/scores/*.yaml
