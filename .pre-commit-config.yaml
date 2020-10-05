@@ -57,17 +57,21 @@ repos:
     rev: 5.2.1
     hooks:
       - id: pip-compile
-        args: [--quiet, --no-header, --generate-hashes, --no-emit-index-url]
+        args: [
+            --quiet,
+            --generate-hashes,
+            --no-emit-index-url,
+            --pip-args=--isolated, # ignore PIP_INDEX_URL, etc
+          ]
         files: ^((requirements(-.*)?\.(in|txt))|setup.py)$
       - id: pip-compile
         name: pip-compile-dev
-        args:
-          [
+        args: [
             --quiet,
-            --allow-unsafe,
-            --no-header,
             --generate-hashes,
             --no-emit-index-url,
+            --pip-args=--isolated, # ignore PIP_INDEX_URL, etc
+            --allow-unsafe,
             --output-file=requirements-dev.txt,
             requirements-dev.in,
           ]
