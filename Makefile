@@ -3,7 +3,7 @@
 # be found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 PYPISERVER_FALLBACK_URL ?= https://pypi.org/simple/
-DOCKER_COMPOSE = JOHANN_CORE_ROOT=./ docker-compose -p johann -f docker-compose.yml
+DOCKER_COMPOSE = PYPISERVER_FALLBACK_URL=$(PYPISERVER_FALLBACK_URL) JOHANN_CORE_ROOT=./ docker-compose -p johann -f docker-compose.yml
 DOCKER_COMPOSE_DEV = $(DOCKER_COMPOSE) -f docker-compose.dev.yml
 DOCKER_COMPOSE_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml
 DOCKER_COMPOSE_ALL = $(DOCKER_COMPOSE) -f docker-compose.dev.yml -f docker-compose.test.yml

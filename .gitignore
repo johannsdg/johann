@@ -205,5 +205,5 @@ johann/run_player_pmtr*
 *.creds
 *.hosts.y*ml
 local_packages
-./plugins.txt
-johann/plugins.txt
+plugins.txt
+!tests/plugins.txt
