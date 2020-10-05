@@ -24,6 +24,9 @@ services:
     build:
       context: ${JOHANN_CORE_ROOT}/
       dockerfile: docker/Dockerfile.conductor
+      args:
+        - PIP_INDEX_URL=http://127.0.0.1:8080
+      network: host
     image: johann_conductor
     environment:
       - ENV_FILE=.env_conductor
@@ -42,6 +45,23 @@ services:
       - public
       - servicenet
 
+  johann_player:
+    container_name: johann_player_1
+    hostname: johann_player_1
+    build:
+      context: ${JOHANN_CORE_ROOT}/
+      dockerfile: docker/Dockerfile.player
+      args:
+        - PIP_INDEX_URL=http://127.0.0.1:8080
+      network: host
+    image: johann_player_base
+    environment:
+      - CELERY_QUEUE_ID=johann_player_1
+    networks:
+      - servicenet
+    depends_on:
+      - johann_conductor
+
   pypiserver:
     container_name: pypiserver
     hostname: pypiserver
@@ -50,6 +70,7 @@ services:
       - type: bind
         source: ${JOHANN_CORE_ROOT}/local_packages
         target: /data/packages
+    command: --fallback-url ${PYPISERVER_FALLBACK_URL} /data/packages
     ports:
       - "127.0.0.1:8080:8080"
     expose:
@@ -57,17 +78,3 @@ services:
     networks:
       - public
       - servicenet
-
-  johann_player:
-    container_name: johann_player_1
-    hostname: johann_player_1
-    build:
-      context: ${JOHANN_CORE_ROOT}/
-      dockerfile: docker/Dockerfile.player
-    image: johann_player_base
-    environment:
-      - CELERY_QUEUE_ID=johann_player_1
-    networks:
-      - servicenet
-    depends_on:
-      - johann_conductor

@@ -6,10 +6,6 @@ version: "2.4"
 
 services:
   johann_conductor:
-    build:
-      args:
-        - PIP_INDEX_URL=http://127.0.0.1:8080/simple
-      network: host
     volumes:
       - ${JOHANN_CORE_ROOT}:/opt/johann
     environment:
@@ -18,10 +14,6 @@ services:
       - RUN_PMTR_SUFFIX=dev
 
   johann_player:
-    build:
-      args:
-        - PIP_INDEX_URL=http://127.0.0.1:8080/simple
-      network: host
     volumes:
       - ${JOHANN_CORE_ROOT}/johann:/opt/johann/johann
     environment:

@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-3-clause license that can
 # be found in the LICENSE file. See the AUTHORS file for names of contributors.
 
-.PHONY: venv build test logs dev prep clean lint safety requirements
-
+PYPISERVER_FALLBACK_URL ?= https://pypi.org/simple/
 DOCKER_COMPOSE = JOHANN_CORE_ROOT=./ docker-compose -p johann -f docker-compose.yml
 DOCKER_COMPOSE_DEV = $(DOCKER_COMPOSE) -f docker-compose.dev.yml
 DOCKER_COMPOSE_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml
@@ -57,8 +56,8 @@ clean-files:
 	rm -f johann.*.pid
 	rm -f johann/*.log
 	rm -f johann/*.pid
-	rm -f johann/requirements_base.txt
-	rm -f johann/requirements_plugins.txt
+	rm -f johann/requirements.txt
+	rm -f johann/plugins.txt
 	rm -rf build dist ./*.egg-info
 
 kill-all:  # will kill any non-Johann containers also
@@ -140,3 +139,5 @@ package:
 	@if [ ! -f $(TWINE) ]; then $(MAKE) dev-setup; fi
 	$(VENV_PYTHON) setup.py sdist bdist_wheel
 	$(TWINE) check dist/*
+
+.PHONY: venv build test logs dev prep clean lint safety requirements
