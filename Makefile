@@ -17,6 +17,7 @@ TWINE = $(VENV_PATH)/bin/twine
 # Building and running Johann
 up: build
 	$(DOCKER_COMPOSE) up -d
+	$(MAKE) test-containers-noforce
 
 logs:
 	$(DOCKER_COMPOSE_ALL) logs -f
@@ -68,6 +69,7 @@ kill-all:  # will kill any non-Johann containers also
 dev: dev-build
 	@if [ ! -f $(PRE_COMMIT) ]; then $(MAKE) dev-setup; fi
 	$(DOCKER_COMPOSE_DEV) up -d
+	$(MAKE) test-containers-noforce
 
 dev-build: dev-prep
 	$(MAKE) package
@@ -117,6 +119,9 @@ tester:  # start a persistent test container with tests/ mounted
 
 test-containers:  # (re)create test target containers
 	$(DOCKER_COMPOSE_TEST) up -d --force-recreate blank_3.6_buster blank_3.7_buster
+
+test-containers-noforce:
+	$(DOCKER_COMPOSE_TEST) up -d blank_3.6_buster blank_3.7_buster
 
 
 # Johann development - other
