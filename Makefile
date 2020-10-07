@@ -67,7 +67,7 @@ kill-all:  # will kill any non-Johann containers also
 # Johann development - building and running
 dev: dev-build
 	@if [ ! -f $(PRE_COMMIT) ]; then $(MAKE) dev-setup; fi
-	$(DOCKER_COMPOSE_ALL) up -d
+	$(DOCKER_COMPOSE_DEV) up -d
 
 dev-build: dev-prep
 	$(MAKE) package
