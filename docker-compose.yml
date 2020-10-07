@@ -62,6 +62,17 @@ services:
     depends_on:
       - johann_conductor
 
+  johann_web:
+    container_name: johann_web
+    image: johannsdg/johann_web_basic:v0.1.0-alpha
+    ports:
+      - "127.0.0.1:80:80"
+    networks:
+      - public
+      - servicenet
+    depends_on:
+      - johann_conductor
+
   pypiserver:
     container_name: pypiserver
     hostname: pypiserver

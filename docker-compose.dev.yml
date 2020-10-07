@@ -19,3 +19,4 @@ services:
     environment:
       - DEBUG=1
       - RUN_PMTR_SUFFIX=dev
+  # PLANNED: dev version of johann_web_basic with volume mounts, etc
