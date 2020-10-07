@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="johann",
-    description="Johann, lightweight and flexible scenario orchestration",
+    description="Johann, the lightweight and flexible scenario orchestrator",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Jeffrey James",
