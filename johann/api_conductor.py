@@ -97,7 +97,9 @@ def read_score(
         return None, msg, 500
 
     scores[score.name] = score
-    logger.debug(f"read score '{score_name}' from package '{package_name}'")
+    logger.debug(
+        f"read score '{score_name}'{' from package {package_name}' if package_name else ''}"
+    )
 
     return score_dict, None, 200
 
@@ -472,8 +474,8 @@ async def roll_call(request: "Request") -> "Response":
     # update score/players if changed
     if request.method == "POST":
         data = await request.json()
-        score.create_hosts = data["create_hosts"]
-        score.discard_hosts = data["discard_hosts"]
+        score.create_hosts = data["create_hosts"]  # PLANNED: REMOVE
+        score.discard_hosts = data["discard_hosts"]  # PLANNED: REMOVE
 
         if "players" in data and isinstance(data["players"], dict):
             posted_players = {}

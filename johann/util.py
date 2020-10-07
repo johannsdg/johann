@@ -99,11 +99,12 @@ def get_score_str(
     if package_name:
         return _get_score_str_helper(score_name, package_name, score_dir)
 
-    for plugin_name in active_plugins:
+    for package_name in ["johann"] + active_plugins:
         score_str = _get_score_str_helper(
-            score_name, plugin_name, score_dir, suppress_warnings=True
+            score_name, package_name, score_dir, suppress_warnings=True
         )
         if score_str:
+            logger.debug(f"Found score {score_name} in package {package_name}")
             return score_str
 
     return None
