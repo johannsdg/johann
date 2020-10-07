@@ -84,8 +84,8 @@ happen at any time. This is represented by its
 
 For now, Johann should be considered to be in perpetual
 [alpha](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha). This is made
-explicit by the "-alpha" or "a" in the version identifier. Please expect it to be rough around the
-edges (and maybe everywhere else).
+explicit by the "-alpha" or "a" in the version identifier. Please expect it to be rough
+around the edges (and maybe everywhere else).
 
 Johann should only be used in isolated or protected networks of known and trusted
 hosts/users. It should only be used for research and development, and **not** in
