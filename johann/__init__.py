@@ -4,4 +4,4 @@
 
 """Johann, lightweight and flexible scenario orchestration"""
 
-__version__ = "0.2.1-alpha"
+__version__ = "0.3.0-alpha"
