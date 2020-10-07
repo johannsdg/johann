@@ -23,6 +23,7 @@ the music.
 - [Built With](#built-with)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
+- [More Info](#more-info)
 
 ## Getting Started
 
@@ -293,6 +294,7 @@ vulnerabilities.
 
 ```bash
 make safety
+```
 
 ### Contribution Flow
 
@@ -315,7 +317,6 @@ While they are opt-in, we strongly recommend the use of the pre-commit hooks pro
 These hooks will need to pass before a PR is accepted, and it helps to work through them ahead of time.
 If you don't know how to or don't want to bother with a particular hook failure(s), that's perfectly fine,
 and we will help you out at PR time -- just use `SKIP=<comma-separated list of hook names> make lint` or, as a last resort, `git [commit, push] --no-verify`
-```
 
 ## Built With
 
@@ -340,3 +341,7 @@ Use of this source code is governed by a BSD-3-clause license that can be found 
 
 - [JHU/APL](https://www.jhuapl.edu) for supporting Johann's licensing as open source
 - Johann S.D.G.
+
+## More Info
+
+More information is available at the [docs](https://johannsdg.github.io/johann_docs/), or you can contact us at lobotmcj[at]gmail .
