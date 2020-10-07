@@ -71,7 +71,7 @@ Use your browser (ideally Chromium-based) to navigate to `http://127.0.0.1/scena
 ```bash
 curl http://127.0.0.1:5000/scores/  # get list of Scores/scenarios
 curl http://127.0.0.1:5000/affrettando/<score_name>  # launch a Score/scenario
-watch 'curl http://127.0.0.1:5000/scores/<score_name/status_short'  # monitor progress
+watch 'curl http://127.0.0.1:5000/scores/<score_name>/status_short'  # monitor progress
 ```
 
 ## This is an alpha prototype
