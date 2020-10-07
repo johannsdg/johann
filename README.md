@@ -59,7 +59,19 @@ docker-compose --version
 Start Johann (this will also build it). This can take a while the first time.
 
 ```bash
-make up
+make dev
+```
+
+### GUI Usage
+
+Use your browser (ideally Chromium-based) to navigate to `http://127.0.0.1/scenarios`
+
+### Basic CLI Usage
+
+```bash
+curl http://127.0.0.1:5000/scores/  # get list of Scores/scenarios
+curl http://127.0.0.1:5000/affrettando/<score_name>  # launch a Score/scenario
+watch 'curl http://127.0.0.1:5000/scores/<score_name/status_short'  # monitor progress
 ```
 
 ## This is an alpha prototype
@@ -72,7 +84,7 @@ happen at any time. This is represented by its
 
 For now, Johann should be considered to be in perpetual
 [alpha](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha). This is made
-explicit by the "a" in the version identifier. Please expect it to be rough around the
+explicit by the "-alpha" or "a" in the version identifier. Please expect it to be rough around the
 edges (and maybe everywhere else).
 
 Johann should only be used in isolated or protected networks of known and trusted
@@ -83,10 +95,9 @@ production.
 
 Here are some planned improvements to Johann, in no particular order:
 
-- add a simple GUI
+- add more documentation
 - switch to [pydantic](https://github.com/samuelcolvin/pydantic)
 - switch to [fastapi](https://github.com/tiangolo/fastapi)
-- add more documentation
 - use [mypy](https://github.com/python/mypy) and
   [pylint](https://github.com/pycqa/pylint)
 - add more tests
@@ -99,6 +110,9 @@ Here are some planned improvements to Johann, in no particular order:
 We welcome pull requests! Before starting, please communicate with us to discuss what
 you would like to change. Please also update tests and documentation as appropriate.
 Thanks!
+
+Johann uses a squash/rebase git flow, which is most closely described
+[here](https://medium.com/singlestone/a-git-workflow-using-rebase-1b1210de83e5).
 
 ### Getting Started
 
@@ -170,6 +184,7 @@ In addition to these, Johann is also made possible with the help of (alphabetica
 
 - [gitlab-ci](https://about.gitlab.com/topics/ci-cd/)
 - [pmtr](https://github.com/troydhanson/pmtr)
+- [uwsgi-nginx-flask-docker](https://github.com/tiangolo/uwsgi-nginx-flask-docker)
 
 ## License
 
