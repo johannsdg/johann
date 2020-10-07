@@ -298,25 +298,29 @@ make safety
 
 ### Contribution Flow
 
-Johann uses a variant of GitHub Flow based on squash/rebase, which is most closely described
-[here](https://medium.com/singlestone/a-git-workflow-using-rebase-1b1210de83e5).
-If you don't know how to squash or rebase yet, don't worry! We'll help you through it at PR time!
+Johann uses a variant of GitHub Flow based on squash/rebase, which is most closely
+described
+[here](https://medium.com/singlestone/a-git-workflow-using-rebase-1b1210de83e5). If you
+don't know how to squash or rebase yet, don't worry! We'll help you through it at PR
+time!
 
 - **Pull Requests should target the `development` branch**
 - commits must have the Developer Certificate of Origin (DCO) (`git commit -s`)
-    - [DCO Wikipedia Article](https://en.wikipedia.org/wiki/Developer_Certificate_of_Origin)
+  - [DCO Wikipedia Article](https://en.wikipedia.org/wiki/Developer_Certificate_of_Origin)
 - commits must also be PGP signed (`git commit -S`)
-    - [Instructions from GitHub](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/managing-commit-signature-verification)
-    - [Instructions from Git](https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work)
+  - [Instructions from GitHub](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/managing-commit-signature-verification)
+  - [Instructions from Git](https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work)
 
-_Again, if any of this is intimidating, don't worry about it! It was new to us too -- feel free to contact us or we can sort it out at PR time!_
+_Again, if any of this is intimidating, don't worry about it! It was new to us too --
+feel free to contact us or we can sort it out at PR time!_
 
 ### Pre-Commit Hooks
 
-While they are opt-in, we strongly recommend the use of the pre-commit hooks provided (see #Linting).
-These hooks will need to pass before a PR is accepted, and it helps to work through them ahead of time.
-If you don't know how to or don't want to bother with a particular hook failure(s), that's perfectly fine,
-and we will help you out at PR time -- just prepend your git commit and/or push command with
+While they are opt-in, we strongly recommend the use of the pre-commit hooks provided
+(see #Linting). These hooks will need to pass before a PR is accepted, and it helps to
+work through them ahead of time. If you don't know how to or don't want to bother with a
+particular hook failure(s), that's perfectly fine, and we will help you out at PR time
+-- just prepend your git commit and/or push command with
 `SKIP=[comma-separated list of hook names]` or, as a last resort, append `--no-verify`.
 
 ## Built With
@@ -345,4 +349,6 @@ Use of this source code is governed by a BSD-3-clause license that can be found 
 
 ## More Info
 
-More information is available at the [docs](https://johannsdg.github.io/johann_docs/), or you can contact us at lobotmcj[at]gmail .
+More information is available at the [docs](https://johannsdg.github.io/johann_docs/),
+or you can contact someone from
+[Johann S.D.G.](https://github.com/orgs/johannsdg/people) .
