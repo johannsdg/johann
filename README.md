@@ -316,7 +316,8 @@ _Again, if any of this is intimidating, don't worry about it! It was new to us t
 While they are opt-in, we strongly recommend the use of the pre-commit hooks provided (see #Linting).
 These hooks will need to pass before a PR is accepted, and it helps to work through them ahead of time.
 If you don't know how to or don't want to bother with a particular hook failure(s), that's perfectly fine,
-and we will help you out at PR time -- just use `SKIP=<comma-separated list of hook names> make lint` or, as a last resort, `git [commit, push] --no-verify`
+and we will help you out at PR time -- just prepend your git commit and/or push command with
+`SKIP=[comma-separated list of hook names]` or, as a last resort, append `--no-verify`.
 
 ## Built With
 
