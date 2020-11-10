@@ -304,7 +304,7 @@ described
 don't know how to squash or rebase yet, don't worry! We'll help you through it at PR
 time!
 
-- **Pull Requests should target the `development` branch**
+- **Pull Requests should target the `develop` branch**
 - commits must have the Developer Certificate of Origin (DCO) (`git commit -s`)
   - [DCO Wikipedia Article](https://en.wikipedia.org/wiki/Developer_Certificate_of_Origin)
 - commits must also be PGP signed (`git commit -S`)
