@@ -40,7 +40,7 @@ prep:
 # Cleanup
 clean: kill
 	$(DOCKER_COMPOSE_ALL) down --volumes --remove-orphans
-	$(DOCKER_COMPOSE_ALL) rm -f
+	$(DOCKER_COMPOSE_ALL) rm -vf
 	docker network prune -f
 	$(MAKE) clean-files
 	# PLANNED: remove __pycache__ dirs
